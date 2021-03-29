@@ -9,7 +9,7 @@ output: pdf_document
 ### A.6. Exercise 5.11. 
 
 ```{r}
-challenger <- read.table("Challenger.txt", header = TRUE)
+challenger <- read.table('https://raw.githubusercontent.com/egarpor/handy/master/datasets/challenger.txt', header = TRUE)
 ```
 
 The challenger.txt dataset contains information regarding the state of the solid rocket boosters after launch for 23 shuttle flights prior the Challenger launch. Each row has, among others, the variables fail.field (indicator of whether there was an incident with the O-rings), nfail.field (number of incidents with the O-rings), and temp (temperature in the day of launch, measured in Celsius degrees). 
@@ -159,6 +159,7 @@ a). Split the dataset into the training sample, comprised of the first 2000 obse
 We can see roughly that the distribution of the observations of the third class and the first/second class is very different, which means that the classification problem would be relatively easy between them (splitting the third class data from the first or the second data). But the distribution of the first class and the second class are very similar observing the plot, only that the distribution of the first class observations are more dispersed, the shape is very likely to be the same, so the classification problem between those two classes will probably be harder. 
 
 ```{r}
+load(url('https://raw.githubusercontent.com/egarpor/handy/master/datasets/ovals.RData'))
 ovals$labels = as.factor(ovals$labels)
 train <- ovals[1:2000,]
 test <- ovals[2001:3000,]
