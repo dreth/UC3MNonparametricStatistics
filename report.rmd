@@ -25,9 +25,9 @@ a) Fit a local logistic regression (first degree) for *fails.field ~ temp*, for 
  
 b) Obtain $\hat{h}_{LCV}$ and plot the LCV function with a reasonable accuracy.
 
-c) Using $\hat{h}_{LCV}$, predict the probability of an incident at temperatures −0.6 (launch temperature of the Challenger) and 11.67 (specific recommendation by the vice president of engineers). 
+c) Using $\hat{h}_{LCV}$, predict the probability of an incident at temperatures -0.6 (launch temperature of the Challenger) and 11.67 (specific recommendation by the vice president of engineers). 
 
-d) What are the local odds at −0.6 and 11.67? Show the local logistic models about these points, in spirit of Figure 5.1, and interpret the results.
+d) What are the local odds at -0.6 and 11.67? Show the local logistic models about these points, in spirit of Figure 5.1, and interpret the results.
 
 ## Category B: Problem 4
 
@@ -35,7 +35,132 @@ d) What are the local odds at −0.6 and 11.67? Show the local logistic models a
 
 a) Code your own implementation of the local cubic estimator. The function must take as input the vector of evaluation points $x$, the sample *data*, and the bandwidth $h$. Use the normal kernel. The result must be a vector of the same length as $x$ containing the estimator evaluated at $x$.
 
-b) Test the implementation by estimating the regression function in the location model $Y=m(X)+\epsilon$, where $m(x) = (x−1)^2$, $X \sim N(1,1)$, and $\epsilon \sim N(0,0.5)$. Do it for a sample of size $n = 500$.
+We have implemented the local polynomial estimator for any $0 \leq p < 8$ (however, $p=3$ is the default parameter as we are asked to implement the local cubic estimator). 
+
+Unfortunately, for large datasets + evaluation points (assuming both are of the same size as we are asked in part *b* of this problem) the function is quite inefficient ($>O(n^3)$). 
+
+Given that our focus was to simply implement it and not necessarily be particularly efficient, we  have gone for the less efficient form of the local polynomial estimator (as described in this section of the [Nonparametric Statistics notes](https://bookdown.org/egarpor/NP-UC3M/kre-i-kre.html#fn128)).
+
+#### Parameters
+
+- **x**: vector of evaluation points
+
+- **data**: sample dataset where the first column (*data[,1]* in R) are the *predictors* and the second column (*data[,2]* in R) are the *response*.
+
+- **h**: bandwidth 
+
+#### Algorithm
+
+The function goes through the following process in order to output the estimation:
+
+1- Some values are initialized:
+    - The resulting vector (*result*, initialized as an empty vector)
+    - The predictors (*predictors*, taken from the first column of the *data* matrix)
+    - The response (*Y*, taken from the second column of the *data* matrix)
+    - A $(p+1) \times 1$ vector with its first entry as 1 and the rest as zero (*e_1*)
+
+The X matrix is also initialized in this step: 
+
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+lce <- function(x, data, h, p=3) {
+    ## INITIALIZING VARIABLES
+    # Resulting vector initilization
+    result <- c()
+
+    # Predictors initialization (copied from data col 1)
+    predictors <- data[,1]
+
+    # Response initialization (copied from data col 2)
+    Y <- data[,2]
+
+    # e_1 (vector of size p+1 x 1 of zeros with the exception of the first entry)
+    e_1 <-  matrix(c(c(1), rep(0,p)),nrow=p+1,ncol=1)
+
+    # X matrix
+    X <- list()
+
+    ## MAIN LOOP
+    for (k in 1:length(x)){
+        # k-th matrix of the list of X, whose size will correspond with the length
+        # of the values the user wants to predict (length of x)
+        X[[k]] <- matrix(,nrow=length(predictors),ncol=p+1)
+
+        # Filling up the k-th X matrix entry by entry
+        for (i in 1:dim(X[[k]])[1]) {
+            for (j in 1:dim(X[[k]])[2]) {
+                # the k-th X matrix's i,j-th positions are filled
+                # subtracting the i-th predictor's value with the k-th
+                # element in the values the user wants to evaluate
+                # all to the power j-1, where the first value obtained
+                # is a 0 in the exponent, rendering the first column of each
+                # X matrix a column of ones, and the last one to the power
+                # of the p defined by the user (default p=3)
+                X[[k]][i,j] <- (predictors[i] - x[k])^(j-1)
+            }
+        }
+
+        # Weights, these change in every loop, therefore must be initialized
+        # in every loop. 
+        # Each weight corresponds to one element of the x vector provided
+        # by the user
+        weights <- c()
+        for (i in 1:length(predictors)) {
+            # We use the K_h normal kernel of the difference between
+            # the i-th predictor and the k-th element of x
+            weights[i] <- pnorm((predictors[i] - x[k])/h)/h
+        }
+        # We create a matrix where the entries of the weights vector
+        # are in the diagonal of a matrix (where all other values are 0)
+        weights <- diag(weights)
+
+        # We calculate W_i^P (x[i]), that is the matrix product of:
+        # the transpose of e_1 times the inverse of the matrix product
+        # of the transpose of the k-th X times the weights times the k-th X
+        # times the transpose of the k-th X times the weights times the response
+        # We then assign this to the k-th element of the result vector initialized before
+        result[k] <- t(e_1) %*% solve(t(X[[k]]) %*% weights %*% X[[k]]) %*% t(X[[k]]) %*% weights %*% Y
+    }
+    
+    ## RETURNING VALUES
+    # We return the estimator evaluated at the vector x
+    return(result)
+}
+```
+
+b) Test the implementation by estimating the regression function in the location model $Y=m(X)+\epsilon$, where $m(x) = (x-1)^2$, $X \sim N(1,1)$, and $\epsilon \sim N(0,0.5)$. Do it for a sample of size $n = 500$.
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+# function to estimate
+m = function(x) ((x-1)^2)
+
+# bandwidth
+h = 0.5
+
+# data simulation
+pred <- rnorm(500, mean=1, sd=1)
+resp <- c()
+for (i in 1:length(pred)) {
+    resp <- c(resp, m(pred[i])) + rnorm(1,mean=0, sd=0.5)
+}
+
+# appending to list object
+simulated_dataset <- matrix(,nrow=length(pred),ncol=2)
+simulated_dataset[,1] <- pred
+simulated_dataset[,2] <- resp
+
+# Running the custom implementation
+imp <- lce(x=rnorm(500, mean=1.1, sd=1), data=simulated_dataset, h=h)
+```
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+# grid to plot and test the accuracy of the implementation
+x_grid <- seq(min(pred),max(pred), l=500)
+plot(pred,resp)
+lines(x_grid, m(x_grid), col=1)
+lines(x_grid, lce(x=x_grid, data=simulated_dataset, h=h), col=2)
+legend("top", legend = c("True reg","LocPoly (3rd deg)"), lwd=2, col=1:2)
+```
 
 ## Category C: Problem 4
 
