@@ -1,7 +1,7 @@
 ---
-title: 'Nonparametric Statistics practice'
-author: 'Daniel Alonso'
-date: 'March 19, 2021'
+title: 'Nonparametric Statistics Final Assignment'
+author: 'Danyu Zhang & Daniel Alonso'
+date: 'March 30, 2021'
 output: 'pdf_document'
 ---
 
@@ -59,7 +59,32 @@ The function goes through the following process in order to output the estimatio
     - The response (*Y*, taken from the second column of the *data* matrix)
     - A $(p+1) \times 1$ vector with its first entry as 1 and the rest as zero (*e_1*)
 
-The X matrix is also initialized in this step: 
+The X matrix is also initialized in this step and corresponds to:
+
+$$\begin{align*}
+\mathbf{X}:=\begin{pmatrix}
+1 & X_1-x & \cdots & (X_1-x)^p\\
+\vdots & \vdots & \ddots & \vdots\\
+1 & X_n-x & \cdots & (X_n-x)^p\\
+\end{pmatrix}_{n\times(p+1)}
+\end{align*}$$
+
+This is initialized as an empty list, where each entry in the list corresponds to the matrix $X$ corresponding to the $k$-th value of the input vector $x$ (values the user wants to predict).
+
+2- Main loop steps
+
+- $k$ iterations are initiated (one per element in the input $x$ vector)
+
+- The element $k$ of the $X$ list of matrices $X$ is created as an empty matrix with dimensions $n \times (p + 1)$, where $n = \text{ amount of values in the predictor column of data}$ and $p = \text{ degree}$ (by default 3).
+
+- $i$ iterations are initiated (one iteration per row in $X[[k]]$) and inside $j$ iterations (one iteration per degree + 1), the dimensions of $X[[k]]$ are used to determine the amount of iterations
+
+- Inside the innermost loop (j-loop) we subtract the k-th element in the input vector from the i-th element in the predictor vector ($predictors[i]$) and we raise the result to the power of $j-1$ (as loops go, this corresponds to $p-3, \dots, p$, for the case p=3)
+
+3- Weights loop
+
+- For the weights loop we use the normal kernel ($dnorm$ in R) and 
+
 
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
