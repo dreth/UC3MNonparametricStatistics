@@ -22,12 +22,221 @@ options(JULIA_HOME = '/home/dreth/julia/bin')
 - **Exercise 5.11**. The *challenger.txt* dataset contains dataset contains information regarding the state of the solidrocket boosters after launch for 23 shuttle flights prior the Challenger launch. Each row has, among others, the variables *fail.field* (indicator of whether there was an incident with the O-rings), *nfail.field* (number of incidents with the O-rings), and *temp* (temperature in the day of launch,measured in degrees Celsius).
 
 a) Fit a local logistic regression (first degree) for *fails.field ~ temp*, for three choices of bandwidths: one that oversmooths, another that is somehow adequate, and another that undersmooths. Do the effects of *temp* on *fails.field* seem to be significant?
- 
+
+&nbsp;
+
+We first read the challenger data:
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+challenger <- read.table('https://raw.githubusercontent.com/egarpor/handy/master/datasets/challenger.txt', header = TRUE)
+```
+
+\normalsize
+
+We can roughly observe that the lower the temperature, the higher the probability of having a incident with the O-rings as most of the observations that where temperatures are below 20 have had an incident; while the majority of the observations with temperatures higher than 20 have not had any incidents. 
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=4.3}
+X = challenger$temp # Assign temperature column to X
+Y = challenger$fail.field # Assign fail.field column to X
+plot(X, Y) # plotting a scatterplot of temp vs fail.field
+```
+
+\normalsize
+
+First of all, we will define a logistic function which transforms $\beta_0$ into probability:
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+logistic <- function(x) 1 / (1 + exp(-x)) # logistic function
+```
+
+\normalsize
+
+\newpage
+
+- **Bandwidth that undersmooths**: $h=0.2$
+
+When the bandwidths equal to 0.2, we can notice that the local logistic regression is roughly interpolating the data points that we have as samples which means that, the estimator is overfitting the samples. 
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7.5}
+h <- 0.2 # bandwidth
+x <- seq(10, 28, l = 5000) # x grid of points to cover
+
+suppressWarnings(
+  fit_glm <- sapply(x, function(x) {
+    K <- dnorm(x = x, mean = X, sd = h)
+    glm.fit(x = cbind(1, X - x), y = Y, weights = K,
+            family = binomial())$coefficients[1]
+  })
+)
+
+plot(x, logistic(fit_glm))
+```
+
+\normalsize
+
+\newpage
+
+- **Bandwidth that oversmooths**: $h=10$
+
+If we set the bandwidth to 10, it is somehow very clear to see that the local likelihood estimator oversmooths the samples, which makes that the samples lose their characteristics.  
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7.5}
+h <- 10
+x <- seq(10, 28, l = 5000)
+
+suppressWarnings(
+  fit_glm <- sapply(x, function(x) {
+    K <- dnorm(x = x, mean = X, sd = h)
+    glm.fit(x = cbind(1, X - x), y = Y, weights = K,
+            family = binomial())$coefficients[1]
+  })
+)
+
+plot(x, logistic(fit_glm))
+```
+
+\normalsize
+
+\newpage
+
+- **Adequate Bandwidth**: $h=2$
+
+By setting the bandwidth to 2, we can observe that the regression is more or less smooth, and it fits the data set that we have without interpolating it or oversmoothing it. 
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7.5}
+h <- 2
+x <- seq(10, 28, l = 5000)
+
+suppressWarnings(
+  fit_glm <- sapply(x, function(x) {
+    K <- dnorm(x = x, mean = X, sd = h)
+    glm.fit(x = cbind(1, X - x), y = Y, weights = K,
+            family = binomial())$coefficients[1]
+  })
+)
+
+plot(x, logistic(fit_glm))
+```
+
+\normalsize
+
+\newpage
+
 b) Obtain $\hat{h}_{LCV}$ and plot the LCV function with a reasonable accuracy.
+
+In this part, the aim is to obtain the best bandwidth by maximazing the likelihood function. As seen before, we know that the optimal bandwidth value will be approximately around 2, so it is reasonable to try the different values around it. 
+
+By plotting the likelihood in function of the possible values of bandwidths, we can see that, 2 is the optimal bandwidth value for the data set. 
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7.5}
+n <- length(Y)
+h <- seq(1.5, 2.3, by=0.1)
+
+suppressWarnings(
+  LCV <- sapply(h, function(h) {
+  sum(sapply(1:n, function(i) {
+    K <- dnorm(x = X[i], mean = X[-i], sd = h)
+    nlm(f = function(beta) {
+      -sum(K * (Y[-i] * (beta[1] + beta[2] * (X[-i] - X[i])) -
+                  log(1 + exp(beta[1] + beta[2] * (X[-i] - X[i])))))
+      }, p = c(0, 0))$minimum
+    }))
+  })
+)
+plot(h, LCV, type = "o")
+abline(v = h[which.max(LCV)], col = 2)
+```
+
+\normalsize
+
+\newpage
 
 c) Using $\hat{h}_{LCV}$, predict the probability of an incident at temperatures -0.6 (launch temperature of the Challenger) and 11.67 (specific recommendation by the vice president of engineers). 
 
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7.5}
+h <- 2
+x <- seq(-0.6, 11.67, l = 500)
+
+suppressWarnings(
+  fit_glm <- sapply(x, function(x) {
+    K <- dnorm(x = x, mean = X, sd = h)
+    glm.fit(x = cbind(1, X - x), y = Y, weights = K,
+            family = binomial())$coefficients[1]
+  })
+)
+
+plot(x, logistic(fit_glm))
+
+# Find probability at x=-0.6 and x=11.67
+pred0.6 = logistic(fit_glm)[1]
+pred11.67 = logistic(fit_glm)[length(fit_glm)]
+
+pred0.6
+pred11.67
+```
+
+\normalsize
+
+\newpage
+
 d) What are the local odds at -0.6 and 11.67? Show the local logistic models about these points, in spirit of Figure 5.1, and interpret the results.
+
+If we fit the estimator utilizing exclusively the point -0.6, we get the estimator value in the neighborhood of -0.6
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+h <- 2
+x <- -0.6
+
+suppressWarnings(
+  fit_glm <- sapply(x, function(x) {
+    K <- dnorm(x = x, mean = X, sd = h)
+    glm.fit(x = cbind(1, X - x), y = Y, weights = K,
+            family = binomial())$coefficients[1]
+  })
+)
+```
+
+\normalsize
+
+And the result of the fit as follows:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+fit_glm
+```
+
+&nbsp;
 
 \newpage
 
@@ -285,14 +494,244 @@ We can see that our implementation traces the true regression reasonably accurat
 
 a) Split the dataset into the training sample, comprised of the first 2,000 observations, and the test sample (rest of the sample). Plot the dataset with colors for its classes. What can you say about the classification problem?
 
+&nbsp;
+
+Importing the necessary libraries for the task:
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+# Importing necessary libraries
+library(ks)
+library(dplyr)
+library(ggplot2)
+```
+
+\normalsize
+
+&nbsp;
+
+We can roughly see that the distribution of the observations of the third class and the first/second class are very different, which means that the classification problem should technically be relatively easy (splitting the third class data from the first or the second data). But by looking at our resulting plot, the distribution of the first class and the second class are very similar, only that the distribution of the first class observations is more dispersed, the shape seems to be the same, so the classification problem between those two classes will probably be more difficult. 
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=4.3}
+# loading the data
+load(url('https://raw.githubusercontent.com/egarpor/handy/master/datasets/ovals.RData'))
+
+ovals$labels = as.factor(ovals$labels) # converting the labels column to factor
+train <- ovals[1:2000,] # splitting the dataset into train 
+test <- ovals[2001:3000,] # and test set
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7}
+# plotting the grid
+ggplot(data = train, aes(x.1, x.2, color = labels)) +
+  geom_point() +   
+  scale_color_manual(values = c("1" = "red", "2" = "blue", "3" = "yellow"))
+```
+
+\normalsize
+
+\newpage
+
 b) Using the training sample, compute the plug-in bandwidth matrices for all the classes.
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=4.3}
+# Filtering x1, x2 and x3 by their respective grouping (determined by the labels column)
+x1 <- ovals %>% filter(labels=="1") %>%
+  select(x.1,x.2)
+x2 <- ovals %>% filter(labels=="2") %>%
+  select(x.1,x.2)
+x3 <- ovals %>% filter(labels=="3") %>%
+  select(x.1,x.2)
+
+# Computing the plug in bandwidth for each subset (x1, x2 and x3)
+h1 <- ks::Hpi(x1)
+h2 <- ks::Hpi(x2)
+h3 <- ks::Hpi(x3)
+```
+
+\normalsize
+
+As previously mentioned, we can notice that the border of the first class if blurrier and harder to define than that of the other 2 classes due to the fact that the observations are noticeably more dispersed; also, the shape of the estimated distributions of group 1 and group 2 are very similar while the estimated distribution of the third group is very different. 
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=4.3}
+cont <- seq(0, 0.05, l = 20) # Defining a grid of 20 elements between 0 and 0.05
+col <- viridis::viridis
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=6}
+par(mfrow = c(1, 3)) # creating a figure grid of 1x3
+
+# plotting the KDEs for each filtered dataset utilizing the plug-in bandwidths
+plot(ks::kde(x = x1, H = h1), display = "filled.contour2",
+     abs.cont = cont, col.fun = col, main = "Plug in bandwidth for group1")
+plot(ks::kde(x = x2, H = h2), display = "filled.contour2",
+     abs.cont = cont, col.fun = col, main = "Plug in bandwidth for group2")
+plot(ks::kde(x = x3, H = h3), display = "filled.contour2",
+     abs.cont = cont, col.fun = col, main = "Plug in bandwidth for group3")
+```
+
+\normalsize
+
+&nbsp;
+
+We can observe that the estimation of the distribution with diagonal bandwidths is rather likely the same as that of non-diagonal bandwidths. 
+
+\newpage
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=4.3}
+# Obtaining diagonal plug in bandwidths
+h1_diag <- ks::Hpi.diag(x1)
+h2_diag <- ks::Hpi.diag(x2)
+h3_diag <- ks::Hpi.diag(x3)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=6}
+par(mfrow = c(1, 3)) # creating a figure grid of 1x3
+
+# plotting the KDEs for each filtered dataset utilizing the diagonal plug-in bandwidths
+plot(ks::kde(x = x1, H = h1_diag), display = "filled.contour2",
+     abs.cont = cont, col.fun = col, main = "Diagonal Plug in bandwidth for group1")
+plot(ks::kde(x = x2, H = h2_diag), display = "filled.contour2",
+     abs.cont = cont, col.fun = col, main = "Diagonal Plug in bandwidth for group2")
+plot(ks::kde(x = x3, H = h3_diag), display = "filled.contour2",
+     abs.cont = cont, col.fun = col, main = "Diagonal Plug in bandwidth for group3")
+```
+
+\normalsize
+
+&nbsp;
+&nbsp;
+
 
 c) Use these plug-in bandwidths to perform kernel discriminant analysis.
 
+&nbsp;
+
+First we split the predictors from the response in order to fit the model. 
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=4.3}
+x <- train[,1:2]
+groups<-train$labels
+```
+
+\normalsize
+
+Then we use *kda* function from package *ks* which computes automatically the model selecting the plug in bandwidths. 
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=4.3}
+# Hpi bandwidths are computed
+kda <- ks::kda(x=x, x.group = groups) 
+```
+
+\normalsize
+
+\newpage
+
 d) Plot the contours of the kernel density estimator of each class and the classes partitions. Use coherent colors between contours and points.
+
+&nbsp;
+
+We can see that the areas classified as red/green coincide, as the highest density red/green areas correspond to the same groups of points, however, most of these were classified in the green group, as the density is significantly more concentrated in the green area. 
+
+The remaining points around the green/blue areas and the middle part are classified inside the red group, as most of its points are dispersed around the areas corresponding to the green/blue sections. Obviously, red points that fall into the highest density sections of our green/blue groups will be misclassified, but the classification errors for this group should be rather small.
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=10}
+par(mfrow = c(1, 1)) # Fixing the grid for individual plots
+
+# We plot the KDA with the parameters as follows
+plot(kda, 
+     col = rainbow(3), 
+     lwd = 2, 
+     col.pt = 1, 
+     cont = seq(5, 85, by = 20), 
+     col.part = rainbow(3, alpha = 0.25), 
+     drawpoints = TRUE)
+```
+
+\normalsize
+
+\newpage
 
 e) Predict the class for the test sample and compare with the true classes. Then report the successful classification rate.
 
+&nbsp;
+
+From the report generated by *compare* from package *ks*, we can see that the kda classifier has a general accuracy of **71.7%**, it classifies specially well the third group (**~93.86%**) and very formidably well the 2nd group (**~92.67%**), it seems to have special difficulty with the first group, the most dispersed one, as we expected, this is understandable, as it is based on KDE. 
+
+The method works impressively for unusually shaped datasets like this one, given the ambiguous and less strong concentration/density of points in the first group, we only classify well the points belonging to this group that are scattered around, outside of high density regions belonging to the two other groups. The final accuracy for this specific group is **~46.71%**, which is basically guessing, however, given the strength at predicting the rest of the groups, depending on the nature of a project, we could more granularly tune the model to predict members of this group slightly better.
+
+A combination of KDA and other models might be suggested solely for this group. What this tells us is that we can confidently trust its prediction as long as the density for a group is somewhat concentrated. With those, the prediction is outstandingly accurate.
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=4.3}
+new_data=test[1:2] # dividing the test set to predict
+```
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=4.3}
+pred_kda <- predict(kda, x = new_data) # predicting over the new_data section of test
+ks::compare(x.group = test$labels, est.group = pred_kda)$cross # confusion matrix for the KDA model
+```
+
+\normalsize
+
 f) Compare the successful classification rate with the one given by LDA. Is it better than kernel discriminant analysis?
 
+And this is where KDA shines versus other models, our results for LDA prove that for a dataset like this one, LDA is quite weak at predicting, where even when purely guessing, general accuracy is incredibly low (**33.6%**), and indiviudal group accuracy is in the same ballpark.
+
+&nbsp;
+
+\tiny
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=4.3}
+lda_model = MASS::lda(x, grouping = groups, data=train) # running LDA model 
+pred_lda = predict(lda_model, newdata = new_data)$class # predicting using LDA
+ks::compare(test$labels, pred_lda) # confusion matrix for LDA
+```
+
+\normalsize
+
 g) Repeat f with QDA.
+
+QDA yields a similar result to LDA, albeit only slightly better, with a general accuracy of **~43.4%** the model is basically guessing and doing so quite innacurately as well. Individual group accuracy is also quite bad. Therefore for this dataset, neither LDA or QDA are appropriate. 
+
+&nbsp;
+
+\tiny
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=4.3}
+qda_model = MASS::qda(x, grouping = groups, data=train) # running QDA model
+pred_qda = predict(qda_model, newdata =new_data)$class # predicting using QDA
+ks::compare(test$labels, pred_qda) # confusion matrix for QDA
+```
+
+\normalsize

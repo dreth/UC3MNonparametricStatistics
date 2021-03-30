@@ -84,7 +84,6 @@ suppressWarnings(
 plot(x, logistic(fit_glm))
 ```
 
-
 b). Obtain hˆLCV and plot the LCV function with a reasonable accuracy. 
 
 In this part, the aim is to obtain the best bandwidth by maximazing the likelihood function. As seen before, we know that the optimal bandwidth value will be approximately around 2, so it is reasonable to try the different values around it. 
@@ -174,8 +173,7 @@ ggplot(data = train, aes(x.1, x.2, color = labels)) +
 b). Using the training sample, compute the plug-in bandwidth matrices for all the classes.
 
 ```{r}
-library(ks)
-library(dplyr)
+
 x1 <- ovals %>% filter(labels=="1") %>%
   select(x.1,x.2)
 x2 <- ovals %>% filter(labels=="2") %>%
