@@ -29,11 +29,16 @@ c) Using $\hat{h}_{LCV}$, predict the probability of an incident at temperatures
 
 d) What are the local odds at -0.6 and 11.67? Show the local logistic models about these points, in spirit of Figure 5.1, and interpret the results.
 
+\newpage
+
 ## Category B: Problem 4
+
 
 - **Exercise 4.9**. Perform the following tasks:
 
 a) Code your own implementation of the local cubic estimator. The function must take as input the vector of evaluation points $x$, the sample *data*, and the bandwidth $h$. Use the normal kernel. The result must be a vector of the same length as $x$ containing the estimator evaluated at $x$.
+
+&nbsp;
 
 We have implemented the local polynomial estimator for any $0 \leq p < 8$ (however, $p=3$ is the default parameter as we are asked to implement the local cubic estimator). 
 
@@ -53,21 +58,25 @@ Given that our focus was to simply implement it and not necessarily be particula
 
 The function goes through the following process in order to output the estimation:
 
-1- Some values are initialized:
-    - The resulting vector (*result*, initialized as an empty vector)
-    - The predictors (*predictors*, taken from the first column of the *data* matrix)
-    - The response (*Y*, taken from the second column of the *data* matrix)
-    - A $(p+1) \times 1$ vector with its first entry as 1 and the rest as zero (*e_1*)
+1- Values are initialized
+
+- The resulting vector (*result*, initialized as an empty vector)
+
+- The predictors (*predictors*, taken from the first column of the *data* matrix)
+
+- The response (*Y*, taken from the second column of the *data* matrix)
+
+- A $(p+1) \times 1$ vector with its first entry as 1 and the rest as zero (*e_1*)
 
 The X matrix is also initialized in this step and corresponds to:
 
-$$\begin{align*}
+$$\begin{split}
 \mathbf{X}:=\begin{pmatrix}
 1 & X_1-x & \cdots & (X_1-x)^p\\
 \vdots & \vdots & \ddots & \vdots\\
 1 & X_n-x & \cdots & (X_n-x)^p\\
 \end{pmatrix}_{n\times(p+1)}
-\end{align*}$$
+\end{split}$$
 
 This is initialized as an empty list, where each entry in the list corresponds to the matrix $X$ corresponding to the $k$-th value of the input vector $x$ (values the user wants to predict).
 
@@ -83,9 +92,21 @@ This is initialized as an empty list, where each entry in the list corresponds t
 
 3- Weights loop
 
-- For the weights loop we use the normal kernel ($dnorm$ in R) and 
+- For the weights loop we use the normal kernel ($dnorm$ in R) and apply it to the difference of the i-th predictor ($predictors[i]$) and the k-th element in the input vector ($x[k]$)
 
+4- Result
 
+- We apply the *diag* R function to the *weights* vector to make it a diagonal matrix with the values of *weights* in the main diagonal.
+
+- We finally add the k-th value (result of $\mathbf{e}_1'(\mathbf{X}'\mathbf{W}\mathbf{X})^{-1}\mathbf{X}'\mathbf{W}\mathbf{Y}$ for the k-th $x$)
+
+- Return the result vector
+
+\newpage
+
+#### Function code with annotations
+
+\footnotesize
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
 lce <- function(x, data, h, p=3) {
@@ -153,32 +174,97 @@ lce <- function(x, data, h, p=3) {
 }
 ```
 
+\normalsize
+
+\newpage
+
 b) Test the implementation by estimating the regression function in the location model $Y=m(X)+\epsilon$, where $m(x) = (x-1)^2$, $X \sim N(1,1)$, and $\epsilon \sim N(0,0.5)$. Do it for a sample of size $n = 500$.
+
+&nbsp;
+
+We assign $m$ to the function $m(x) = (x-1)^2$
+
+\footnotesize
+
+&nbsp;
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
 # function to estimate
 m = function(x) ((x-1)^2)
+```
 
+\normalsize
+
+We select a bandwidth $h$:
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
 # bandwidth
 h = 0.5
+```
 
+\normalsize
+
+We generate *pred* (predictor variable values) and *resp* (response variable values) and we add the $\epsilon$ for each response entry in a loop after applying the $m(x)$ function defined earlier to the values of *pred*
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
 # data simulation
 pred <- rnorm(500, mean=1, sd=1)
 resp <- c()
 for (i in 1:length(pred)) {
-    resp <- c(resp, m(pred[i])) + rnorm(1,mean=0, sd=0.5)
+    resp <- c(resp, m(pred[i])) + rnorm(1, mean=0, sd=0.5)
 }
+```
 
+\normalsize
+
+We create the variable *simulated_dataset* as a matrix with dimensions $\text{length(pred)} \times 2$, the rows being amount of terms in *pred* and *resp* and columns being: 1- predictors and 2- response. This will facilitate the input to our *lce* function.
+
+&nbsp;
+
+\footnotesize
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
 # appending to list object
 simulated_dataset <- matrix(,nrow=length(pred),ncol=2)
 simulated_dataset[,1] <- pred
 simulated_dataset[,2] <- resp
-
-# Running the custom implementation
-imp <- lce(x=rnorm(500, mean=1.1, sd=1), data=simulated_dataset, h=h)
 ```
 
+\normalsize
+
+We run our custom implementation of the local cubic estimator for a sample size of $n=500$, we generate the values from a normal distribution using *rnorm* with $\mu = 1$ and $\sigma = 1$.
+
+&nbsp;
+
+\footnotesize
+
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
+# Running the custom implementation
+test_sample <- rnorm(500, mean=1, sd=1)
+imp <- lce(x=test_sample, data=simulated_dataset, h=h)
+```
+
+\normalsize
+
+\newpage
+
+We plot the points obtained by our implementation vs the original values as follows
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, fig.height=6}
+plot(test_sample, imp)
+```
+
+We run our implementation vs the true regression for a grid within the range of *pred*.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, fig.height=6}
 # grid to plot and test the accuracy of the implementation
 x_grid <- seq(min(pred),max(pred), l=500)
 plot(pred,resp)
@@ -186,6 +272,12 @@ lines(x_grid, m(x_grid), col=1)
 lines(x_grid, lce(x=x_grid, data=simulated_dataset, h=h), col=2)
 legend("top", legend = c("True reg","LocPoly (3rd deg)"), lwd=2, col=1:2)
 ```
+
+We can see that our implementation traces the true regression reasonably accurately with our chosen bandwidth $h=0.5$
+
+\normalsize
+
+\newpage
 
 ## Category C: Problem 4
 
