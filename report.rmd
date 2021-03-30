@@ -11,8 +11,6 @@ collapse = TRUE,
 comment = '#>',
 fig.path = './figures/'
 )
-knitr::knit_engines$set(julia = JuliaCall::eng_juliacall)
-options(JULIA_HOME = '/home/dreth/julia/bin')
 ```
 
 # Exercises
@@ -425,9 +423,12 @@ We generate *pred* (predictor variable values) and *resp* (response variable val
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
 # data simulation
-pred <- rnorm(500, mean=1, sd=1)
-resp <- c()
+pred <- rnorm(500, mean=1, sd=1) # simulating 500 normally distributed values with mean = 1 and std = 1
+resp <- c() # creating an empty vector to be appended values for the response
 for (i in 1:length(pred)) {
+    # generating the response adding the epsilon value
+    # the epsilon error value will be a randomly generated
+    # normally distributed value with mean 0 and std = 0.5
     resp <- c(resp, m(pred[i])) + rnorm(1, mean=0, sd=0.5)
 }
 ```
@@ -442,9 +443,9 @@ We create the variable *simulated_dataset* as a matrix with dimensions $\text{le
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
 # appending to list object
-simulated_dataset <- matrix(,nrow=length(pred),ncol=2)
-simulated_dataset[,1] <- pred
-simulated_dataset[,2] <- resp
+simulated_dataset <- matrix(,nrow=length(pred),ncol=2) # generating empty matrix with nrow = lenght of predictor vector
+simulated_dataset[,1] <- pred # adding the predictors to column 1 of the matrix
+simulated_dataset[,2] <- resp # adding the response to column 2 of the matrix
 ```
 
 \normalsize
@@ -457,8 +458,8 @@ We run our custom implementation of the local cubic estimator for a sample size 
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
 # Running the custom implementation
-test_sample <- rnorm(500, mean=1, sd=1)
-imp <- lce(x=test_sample, data=simulated_dataset, h=h)
+test_sample <- rnorm(500, mean=1, sd=1) # we generate 500 random normally distributed values with mean = 1 and sd = 1 to test
+imp <- lce(x=test_sample, data=simulated_dataset, h=h) # we run the implementation using the dataset and bandwidth supplied
 ```
 
 \normalsize
@@ -474,12 +475,13 @@ plot(test_sample, imp)
 We run our implementation vs the true regression for a grid within the range of *pred*.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, fig.height=6}
-# grid to plot and test the accuracy of the implementation
+# generate grid to plot and test the accuracy of the implementation
 x_grid <- seq(min(pred),max(pred), l=500)
-plot(pred,resp)
+plot(pred,resp) # plot the predictors vs the response
+# tracing the regresion and custom local cubic estimator lines
 lines(x_grid, m(x_grid), col=1)
 lines(x_grid, lce(x=x_grid, data=simulated_dataset, h=h), col=2)
-legend("top", legend = c("True reg","LocPoly (3rd deg)"), lwd=2, col=1:2)
+legend("top", legend = c("True reg","LocPoly (3rd deg)"), lwd=2, col=1:2) 
 ```
 
 We can see that our implementation traces the true regression reasonably accurately with our chosen bandwidth $h=0.5$
