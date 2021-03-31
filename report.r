@@ -17,13 +17,16 @@ x <- seq(10, 28, l = 5000) # x grid of points to cover
 
 suppressWarnings(
   fit_glm <- sapply(x, function(x) {
+    # setting the weights for each data point using Gaussian kernels
     K <- dnorm(x = x, mean = X, sd = h)
+    # fitting the local logistic regression and taking the coefficient
     glm.fit(x = cbind(1, X - x), y = Y, weights = K,
             family = binomial())$coefficients[1]
   })
 )
 
-plot(x, logistic(fit_glm))
+# plotting the estimated probabilities of having an incident in function of temperature when overfitting
+plot(x, logistic(fit_glm)) 
 
 # Bandwidth that oversmooths
 h <- 10
@@ -31,13 +34,16 @@ x <- seq(10, 28, l = 5000)
 
 suppressWarnings(
   fit_glm <- sapply(x, function(x) {
-    K <- dnorm(x = x, mean = X, sd = h)
-    glm.fit(x = cbind(1, X - x), y = Y, weights = K,
+    # setting the weights for each data point using Gaussian kernels
+    K <- dnorm(x = x, mean = X, sd = h) 
+    # fitting local logistic regression and taking the coefficient
+    glm.fit(x = cbind(1, X - x), y = Y, weights = K, 
             family = binomial())$coefficients[1]
   })
 )
 
-plot(x, logistic(fit_glm))
+# plotting the estimated probabilities of having an incident in function of temperature when underfitting
+plot(x, logistic(fit_glm)) 
 
 # Adequate Bandwidth
 h <- 2
@@ -45,36 +51,45 @@ x <- seq(10, 28, l = 5000)
 
 suppressWarnings(
   fit_glm <- sapply(x, function(x) {
+    # setting the weights for each data point using Gaussian kernels
     K <- dnorm(x = x, mean = X, sd = h)
+    # fitting local logistic regression and taking the coefficient
     glm.fit(x = cbind(1, X - x), y = Y, weights = K,
             family = binomial())$coefficients[1]
   })
 )
 
-plot(x, logistic(fit_glm))
+# plotting the estimated probabilities of having an incident in function of temperature when fitting with an adequate bandwidth
+plot(x, logistic(fit_glm)) 
 
 # PART B
-n <- length(Y)
-h <- seq(1.5, 2.3, by=0.1)
+n <- length(Y) # number of data points 
+h <- seq(1.5, 2.3, by=0.1) # grid of bandwidths' values that we want to test in order to have a maximized value of likelihood
 
 suppressWarnings(
   LCV <- sapply(h, function(h) {
-  sum(sapply(1:n, function(i) {
-    K <- dnorm(x = X[i], mean = X[-i], sd = h)
-    nlm(f = function(beta) {
-      -sum(K * (Y[-i] * (beta[1] + beta[2] * (X[-i] - X[i])) -
-                  log(1 + exp(beta[1] + beta[2] * (X[-i] - X[i])))))
+    sum(sapply(1:n, function(i) {
+      # kernel
+      K <- dnorm(x = X[i], mean = X[-i], sd = h)
+      # optimizing function
+      nlm(f = function(beta) { 
+        # Maximum likelihood function
+        -sum(K * (Y[-i] * (beta[1] + beta[2] * (X[-i] - X[i])) -
+                    log(1 + exp(beta[1] + beta[2] * (X[-i] - X[i])))))
       }, p = c(0, 0))$minimum
     }))
   })
 )
+
+# plotting the likelihoods in function of bandwidths' values
 plot(h, LCV, type = "o")
 abline(v = h[which.max(LCV)], col = 2)
 
 
 # PART C
 h <- 2
-x <- seq(-0.6, 11.67, l = 500)
+# setting the grid with the values that we want to predict in order to visualize it from the plot temperature vs probability
+x <- seq(-0.6, 11.67, l = 500) 
 
 suppressWarnings(
   fit_glm <- sapply(x, function(x) {
@@ -84,6 +99,7 @@ suppressWarnings(
   })
 )
 
+# plotting the estimated probabilities of having an incident in function of temperature when fitting with the optimized bandwidth value
 plot(x, logistic(fit_glm))
 
 # Find probability at x=-0.6 and x=11.67
@@ -95,17 +111,27 @@ pred11.67
 
 # PART D
 h <- 2
-x <- -0.6
+x1 <- -0.6
+x2 <- 11.67
 
 suppressWarnings(
-  fit_glm <- sapply(x, function(x) {
-    K <- dnorm(x = x, mean = X, sd = h)
-    glm.fit(x = cbind(1, X - x), y = Y, weights = K,
+  fit_glm1 <- sapply(x1, function(x1) {
+    K <- dnorm(x = x1, mean = X, sd = h) # fitting at the point x1 = -0.6
+    glm.fit(x = cbind(1, X - x1), y = Y, weights = K,
             family = binomial())$coefficients[1]
   })
 )
 
-fit_glm
+suppressWarnings(
+  fit_glm2 <- sapply(x2, function(x2) {
+    K <- dnorm(x = x2, mean = X, sd = h) # fitting at the point x2 = 11.67
+    glm.fit(x = cbind(1, X - x2), y = Y, weights = K,
+            family = binomial())$coefficients[1]
+  })
+)
+
+fit_glm1 # -0.6 fit
+fit_glm2 # 11.67 fit
 
 ###################################################################################
 ###################################################################################

@@ -73,13 +73,16 @@ x <- seq(10, 28, l = 5000) # x grid of points to cover
 
 suppressWarnings(
   fit_glm <- sapply(x, function(x) {
+    # setting the weights for each data point using Gaussian kernels
     K <- dnorm(x = x, mean = X, sd = h)
+    # fitting the local logistic regression and taking the coefficient
     glm.fit(x = cbind(1, X - x), y = Y, weights = K,
             family = binomial())$coefficients[1]
   })
 )
 
-plot(x, logistic(fit_glm))
+# plotting the estimated probabilities of having an incident in function of temperature when overfitting
+plot(x, logistic(fit_glm)) 
 ```
 
 \normalsize
@@ -95,18 +98,21 @@ If we set the bandwidth to 10, it is somehow very clear to see that the local li
 \footnotesize
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7.5}
-h <- 10
-x <- seq(10, 28, l = 5000)
+h <- 10 # bandwidth
+x <- seq(10, 28, l = 5000) # x grid of points to cover
 
 suppressWarnings(
   fit_glm <- sapply(x, function(x) {
-    K <- dnorm(x = x, mean = X, sd = h)
-    glm.fit(x = cbind(1, X - x), y = Y, weights = K,
+    # setting the weights for each data point using Gaussian kernels
+    K <- dnorm(x = x, mean = X, sd = h) 
+    # fitting local logistic regression and taking the coefficient
+    glm.fit(x = cbind(1, X - x), y = Y, weights = K, 
             family = binomial())$coefficients[1]
   })
 )
 
-plot(x, logistic(fit_glm))
+# plotting the estimated probabilities of having an incident in function of temperature when underfitting
+plot(x, logistic(fit_glm)) 
 ```
 
 \normalsize
@@ -122,18 +128,21 @@ By setting the bandwidth to 2, we can observe that the regression is more or les
 \footnotesize
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7.5}
-h <- 2
-x <- seq(10, 28, l = 5000)
+h <- 2 # bandwidth
+x <- seq(10, 28, l = 5000) # x grid of points to cover
 
 suppressWarnings(
   fit_glm <- sapply(x, function(x) {
+    # setting the weights for each data point using Gaussian kernels
     K <- dnorm(x = x, mean = X, sd = h)
+    # fitting local logistic regression and taking the coefficient
     glm.fit(x = cbind(1, X - x), y = Y, weights = K,
             family = binomial())$coefficients[1]
   })
 )
 
-plot(x, logistic(fit_glm))
+# plotting the estimated probabilities of having an incident in function of temperature when fitting with an adequate bandwidth
+plot(x, logistic(fit_glm)) 
 ```
 
 \normalsize
@@ -151,20 +160,25 @@ By plotting the likelihood in function of the possible values of bandwidths, we 
 \footnotesize
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7.5}
-n <- length(Y)
-h <- seq(1.5, 2.3, by=0.1)
+n <- length(Y) # number of data points 
+h <- seq(1.5, 2.3, by=0.1) # grid of bandwidths' values that we want to test in order to have a maximized value of likelihood
 
 suppressWarnings(
   LCV <- sapply(h, function(h) {
   sum(sapply(1:n, function(i) {
+    # kernel
     K <- dnorm(x = X[i], mean = X[-i], sd = h)
-    nlm(f = function(beta) {
+    # optimizing function
+    nlm(f = function(beta) { 
+      # Maximum likelihood function
       -sum(K * (Y[-i] * (beta[1] + beta[2] * (X[-i] - X[i])) -
                   log(1 + exp(beta[1] + beta[2] * (X[-i] - X[i])))))
       }, p = c(0, 0))$minimum
     }))
   })
 )
+
+# plotting the likelihoods in function of bandwidths' values
 plot(h, LCV, type = "o")
 abline(v = h[which.max(LCV)], col = 2)
 ```
@@ -181,7 +195,8 @@ c) Using $\hat{h}_{LCV}$, predict the probability of an incident at temperatures
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7.5}
 h <- 2
-x <- seq(-0.6, 11.67, l = 500)
+# setting the grid with the values that we want to predict in order to visualize it from the plot temperature vs probability
+x <- seq(-0.6, 11.67, l = 500) 
 
 suppressWarnings(
   fit_glm <- sapply(x, function(x) {
@@ -191,13 +206,25 @@ suppressWarnings(
   })
 )
 
+# plotting the estimated probabilities of having an incident in function of temperature when fitting with the optimized bandwidth value
 plot(x, logistic(fit_glm))
 
 # Find probability at x=-0.6 and x=11.67
 pred0.6 = logistic(fit_glm)[1]
 pred11.67 = logistic(fit_glm)[length(fit_glm)]
+```
 
+The predictions are as follows:
+
+- For -0.6:
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7.5}
 pred0.6
+```
+
+- For 11.67:
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7.5}
 pred11.67
 ```
 
@@ -207,7 +234,7 @@ pred11.67
 
 d) What are the local odds at -0.6 and 11.67? Show the local logistic models about these points, in spirit of Figure 5.1, and interpret the results.
 
-If we fit the estimator utilizing exclusively the point -0.6, we get the estimator value in the neighborhood of -0.6
+If we fit the estimator utilizing exclusively the point -0.6, we get the estimator value in the neighborhood of -0.6, and so is that for the local logistic regression at the point 11.67.
 
 &nbsp;
 
@@ -215,12 +242,21 @@ If we fit the estimator utilizing exclusively the point -0.6, we get the estimat
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
 h <- 2
-x <- -0.6
+x1 <- -0.6
+x2 <- 11.67
 
 suppressWarnings(
-  fit_glm <- sapply(x, function(x) {
-    K <- dnorm(x = x, mean = X, sd = h)
-    glm.fit(x = cbind(1, X - x), y = Y, weights = K,
+  fit_glm1 <- sapply(x1, function(x1) {
+    K <- dnorm(x = x1, mean = X, sd = h) # fitting at the point x1 = -0.6
+    glm.fit(x = cbind(1, X - x1), y = Y, weights = K,
+            family = binomial())$coefficients[1]
+  })
+)
+
+suppressWarnings(
+  fit_glm2 <- sapply(x2, function(x2) {
+    K <- dnorm(x = x2, mean = X, sd = h) # fitting at the point x2 = 11.67
+    glm.fit(x = cbind(1, X - x2), y = Y, weights = K,
             family = binomial())$coefficients[1]
   })
 )
@@ -228,10 +264,11 @@ suppressWarnings(
 
 \normalsize
 
-And the result of the fit as follows:
+And the result of the fits as follows:
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-fit_glm
+fit_glm1
+fit_glm2
 ```
 
 &nbsp;
@@ -687,7 +724,7 @@ e) Predict the class for the test sample and compare with the true classes. Then
 
 From the report generated by *compare* from package *ks*, we can see that the kda classifier has a general accuracy of **71.7%**, it classifies specially well the third group (**~93.86%**) and very formidably well the 2nd group (**~92.67%**), it seems to have special difficulty with the first group, the most dispersed one, as we expected, this is understandable, as it is based on KDE. 
 
-The method works impressively for unusually shaped datasets like this one, given the ambiguous and less strong concentration/density of points in the first group, we only classify well the points belonging to this group that are scattered around, outside of high density regions belonging to the two other groups. The final accuracy for this specific group is **~46.71%**, which is basically guessing, however, given the strength at predicting the rest of the groups, depending on the nature of a project, we could more granularly tune the model to predict members of this group slightly better.
+The method works impressively for unusually shaped datasets like this one, given the ambiguous and less strong concentration/density of points in the first group, we only classify well the points belonging to this group that are scattered around, outside of high density regions belonging to the two other groups. The final accuracy for this specific group is **~28.74%**, which is basically guessing, however, given the strength at predicting the rest of the groups, depending on the nature of a project, we could more granularly tune the model to predict members of this group slightly better.
 
 A combination of KDA and other models might be suggested solely for this group. What this tells us is that we can confidently trust its prediction as long as the density for a group is somewhat concentrated. With those, the prediction is outstandingly accurate.
 
